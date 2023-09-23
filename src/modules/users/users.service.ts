@@ -29,6 +29,15 @@ export class userService {
         }
     }
 
+    async findUserbyid (id){
+        try {
+           let res = await this.userModel.findById(id)  
+           return res
+        } catch (error) {
+            return error
+        }
+    }
+
     async getall ( ){
         try {
             let res = await this.userModel.find();
@@ -57,7 +66,6 @@ export class userService {
             }
             
             let res = await this.userModel.findByIdAndUpdate(id,update,{new:true})
-            console.info(res);
 
             return res
         }

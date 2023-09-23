@@ -1,9 +1,11 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Req, Res,Get,UseGuards } from "@nestjs/common";
+import { Body, Controller, HttpCode, HttpStatus, Post, Req, Res,Get,UseGuards, UnauthorizedException } from "@nestjs/common";
 import { userService } from "./users.service";
 var bcrypt = require('bcryptjs');
 let jwt = require("jsonwebtoken")
 import {config } from '../../config/config'
 import { JwtMiddleware } from "../jwt.middleware";
+import { AuthGuard } from "../middlewares/AuthMiddleware";
+import { info } from "console";
 
 @Controller('/users')
 @UseGuards(JwtMiddleware)
@@ -12,22 +14,37 @@ export class usersController {
         private readonly userService : userService
     ){}
 
+    @UseGuards(AuthGuard)
     @Get('/getAll')
-    async getAllusers (@Body() Body, @Res() res){
+    async getAllusers (@Body() Body, @Res() res, @Req() req){
+
+        let tokenInfo = req?.Token_decoaded
         let result = await this.userService.getall()
         res.status(HttpStatus.OK).json({success:true,user:result})
     }
 
+    @UseGuards(AuthGuard)
     @Post('/deleteUser')
     async deleteuser (@Req() req , @Res() res,@Body() body){
+        let tokenInfo = req?.Token_decoaded
+        let user = await this.userService.findUserbyid(tokenInfo.userId)
+        let permission = user?.permission?.USER?.delete
+         if(!permission){
+            throw new UnauthorizedException();    
+         }
         let result = await this.userService.deleteUser(body)
         res.status(HttpStatus.OK).json(result)
     }
 
-
+    @UseGuards(AuthGuard)
     @Post('/register')
     async userRegister(@Body() body, @Res() res, @Req() req ){
-
+        let tokenInfo = req?.Token_decoaded
+        let user = await this.userService.findUserbyid(tokenInfo.userId)
+        let role = user?.role
+         if(role != "ADMIN"){
+            throw new UnauthorizedException();    
+         }
         if(!body?.email || !body?.password){
             res.status(HttpStatus.BAD_REQUEST).json({success:false,message:"All fields are compulsary"})       
         }
@@ -85,8 +102,19 @@ export class usersController {
         }
     }
 
+
+    @UseGuards(AuthGuard)
     @Post('/userUpdate')
     async updateUser (@Body() Body,@Req() req, @Res() res){
+
+        let tokenInfo = req?.Token_decoaded
+        let user = await this.userService.findUserbyid(tokenInfo.userId)
+        let role = user?.role
+        let permission = user?.permission?.USER?.write
+
+         if(role != "ADMIN" || !permission){
+            throw new UnauthorizedException();    
+         }
         let result = await this.userService.updateUser(Body)
         res.status(HttpStatus.OK).json({success:true,message:"User Updated Successfully",data : result})
     }

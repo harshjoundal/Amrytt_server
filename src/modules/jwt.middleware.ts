@@ -14,7 +14,6 @@ export class JwtMiddleware implements NestMiddleware {
     try {
       const decoded = jwt.verify(token, config.secret_key); 
       req.tokenData = decoded;
-      console.info(decoded,token)
       next();
     } catch (error) {
       return res.status(401).json({ message: 'Invalid token' });
